@@ -18,15 +18,22 @@ class Neuron {
         ~Neuron();
         Neuron& operator= (Neuron rhsNeuron);
         void Swap(Neuron &rhsNeuron);
+        
 
-        void ResizeNeuron(ImageHeader imgHdr, LabelHeader lblHdr);
-        GLdouble ** inputArr;
+		//functions that actually matter
+		void ResizeNeuron(ImageHeader imgHdr, LabelHeader lblHdr);
+		
+
+		// properties of a neuron - essentially a struct in a class
+		GLdouble ** inputArr;
         GLdouble ** weightOne;
         GLdouble output;
         GLdouble sigmoidOutput;
         GLdouble bias;
+		GLdouble sizeX;
+		GLdouble sizeY;
 
-
+	private:
 
 };
 

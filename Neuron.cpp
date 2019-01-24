@@ -7,18 +7,29 @@
 
 Neuron::Neuron()
 {
-
     inputArr = new GLdouble * [28]();
     weightOne = new GLdouble * [28]();
-
     for (int jj = 0; jj < 28; jj += 1)
     {
         inputArr[jj] = new GLdouble[28]();
         weightOne[jj] = new GLdouble[28]();
     }
 
+	for (int ii = 0; ii < 28; ii += 1)
+	{
+		for (int jj = 0; jj < 28; jj += 1)
+		{
+			inputArr[ii][jj] = 0.00;
+			weightOne[ii][jj] = 0.00;
+		}
+	}
+
     output = 0;
     bias = 0;
+	sigmoidOutput = 0;
+
+	sizeX = 28;
+	sizeY = 28;
 }
 
 Neuron::Neuron(ImageHeader imgHdr, LabelHeader lblHdr)
@@ -32,8 +43,20 @@ Neuron::Neuron(ImageHeader imgHdr, LabelHeader lblHdr)
         weightOne[ii] = new GLdouble[imgHdr.imgHeight]();
     }
 
+	for (int ii = 0; ii < imgHdr.imgWidth; ii += 1)
+	{
+		for (int jj = 0; jj < imgHdr.imgHeight; jj += 1)
+		{
+			inputArr[ii][jj] = 0.00;
+			weightOne[ii][jj] = 0.00;
+		}
+	}
+
     output = 0;
     bias = 0;
+
+	sizeX = imgHdr.imgWidth;
+	sizeY = imgHdr.imgHeight;
 
 
 }
@@ -41,8 +64,11 @@ Neuron::Neuron(ImageHeader imgHdr, LabelHeader lblHdr)
 Neuron::~Neuron()
 {
     std::cout << "Neuron Destructor: Deleting neuron..." << std::endl;
-    delete [] inputArr;
-    delete [] weightOne;
+	std::cout << "check input is not empty: " << inputArr[0][0] << std::endl;
+	std::cout << "check weight is not empty: " << weightOne[0][0] << std::endl;
+
+    delete  inputArr;
+    delete  weightOne;
 }
 
 Neuron& Neuron::operator=(Neuron rhsNeuron)
@@ -67,18 +93,18 @@ void Neuron::ResizeNeuron(ImageHeader imgHdr, LabelHeader lblHdr){
     GLdouble ** tempWeightOne;
 
     // initialise new arrays;
-    tempArr = new GLdouble*[imgHdr.imgWidth];
-    tempWeightOne = new GLdouble*[imgHdr.imgWidth];
+    tempArr = new GLdouble*[imgHdr.imgWidth]();
+    tempWeightOne = new GLdouble*[imgHdr.imgWidth]();
     for(int jj = 0; jj < imgHdr.imgWidth; jj += 1)
     {
-        tempArr[jj] = new GLdouble[imgHdr.imgHeight];
-        tempWeightOne[jj] = new GLdouble[imgHdr.imgHeight];
+        tempArr[jj] = new GLdouble[imgHdr.imgHeight]();
+        tempWeightOne[jj] = new GLdouble[imgHdr.imgHeight]();
     }
 
     // copying original arrays
-    for(int jj = 0; jj < 28; jj += 1)
+    for(int jj = 0; jj < sizeX; jj += 1)
     {
-        for(int kk = 0; kk < 28; kk += 1)
+        for(int kk = 0; kk < sizeY; kk += 1)
         {
             tempArr[jj][kk] = inputArr[jj][kk];
             tempWeightOne[jj][kk] = weightOne[jj][kk];
@@ -86,34 +112,33 @@ void Neuron::ResizeNeuron(ImageHeader imgHdr, LabelHeader lblHdr){
         }
     }
 
+	sizeX = imgHdr.imgWidth;
+	sizeY = imgHdr.imgHeight;
 
+	// dunno how it worked in the first version
+	
     // clear arrays
     delete [] inputArr;
     delete [] weightOne;
+	
 
     // redeclaring arrays and copying contents from temp to class arrays
+    inputArr = new GLdouble * [imgHdr.imgWidth]();
+    weightOne = new GLdouble * [imgHdr.imgWidth]();
+    for(int jj = 0; jj < imgHdr.imgWidth; jj += 1)
+    {
+        inputArr[jj] = new GLdouble [imgHdr.imgHeight]();
+        weightOne[jj] = new GLdouble [imgHdr.imgHeight]();
 
-
-        inputArr = new GLdouble * [imgHdr.imgWidth]();
-        weightOne = new GLdouble * [imgHdr.imgWidth]();
-
-        for(int jj = 0; jj < imgHdr.imgWidth; jj += 1)
+        for(int kk = 0; kk < imgHdr.imgHeight; kk += 1)
         {
-            inputArr[jj] = new GLdouble [imgHdr.imgHeight]();
-            weightOne[jj] = new GLdouble [imgHdr.imgHeight]();
-
-            for(int kk = 0; kk < imgHdr.imgHeight; kk += 1)
-            {
-                inputArr[jj][kk] = tempArr[jj][kk];
-                weightOne[jj][kk] = tempWeightOne[jj][kk];
-
-            }
+            inputArr[jj][kk] = tempArr[jj][kk];
+            weightOne[jj][kk] = tempWeightOne[jj][kk];
         }
-
-
+    }
+	
     delete [] tempArr;
     delete [] tempWeightOne;
-
 
     std::cout << "Finished resizing neuron..." << std::endl;
 }

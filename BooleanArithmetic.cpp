@@ -6,7 +6,7 @@
 
 GLdouble BooleanArithmetic::DotMultiply(ImageHeader imgHdr, GLdouble **targetOne, GLdouble **targetTwo)
 {
-    GLdouble tempResult;
+    GLdouble tempResult = 0.00;
 
     for(int ii = 0; ii < imgHdr.imgWidth; ii += 1)
     {

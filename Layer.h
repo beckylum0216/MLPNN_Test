@@ -33,14 +33,18 @@ class Layer {
         *	@pre
         *	@post
         */
-        void ResizeLayer(ImageHeader imgHdr, LabelHeader lblHdr, int inputSize);
+        void ResizeLayer(ImageHeader imgHdr, LabelHeader lblHdr, int Size);
 		int GetLayerSize();
+		int GetNeuralSize();
 
 
     private:
-        Neuron * theLayer;
+		void Swap(Layer &rhsVar);
+
+		Neuron * neuralLayer;
         int layerSize;
-        void Swap(Layer &rhsVar);
+		int neuralSize;
+        
 
 };
 

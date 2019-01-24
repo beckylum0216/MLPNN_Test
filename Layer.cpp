@@ -8,25 +8,29 @@
 
 Layer::Layer()
 {
-    theLayer = new Neuron();
-    layerSize = 0;
+    neuralLayer = new Neuron[2]();
+    neuralSize = 2;
 }
 
 Layer::Layer(const Layer &rhsLayer)
 {
-    this->theLayer = rhsLayer.theLayer;
+    this->neuralLayer = rhsLayer.neuralLayer;
     this->layerSize = rhsLayer.layerSize;
+	this->neuralSize = rhsLayer.neuralSize;
 }
 
 Layer::Layer(ImageHeader imgHdr, LabelHeader lblHdr, int neuronSize)
 {
     std::cout << "running overloaded layer" << std::endl;
 
-    theLayer = new Neuron[neuronSize]();
+    neuralLayer = new Neuron[neuronSize]();
     for(int ii = 0; ii < neuronSize; ii += 1)
     {
-        theLayer[ii].ResizeNeuron(imgHdr, lblHdr);
+        neuralLayer[ii].ResizeNeuron(imgHdr, lblHdr);
     }
+
+	layerSize = neuronSize;
+	neuralSize = neuronSize;
 
     std::cout << "layer created..." << std::endl;
 }
@@ -34,7 +38,7 @@ Layer::Layer(ImageHeader imgHdr, LabelHeader lblHdr, int neuronSize)
 Layer::~Layer()
 {
     std::cout << "deleting layers..." << std::endl;
-    delete [] theLayer;
+    delete [] neuralLayer;
 }
 
 Layer& Layer::operator=(Layer rhsVar)
@@ -45,12 +49,12 @@ Layer& Layer::operator=(Layer rhsVar)
 
 void Layer::Swap(Layer &rhsVar)
 {
-    std::swap(this->theLayer, rhsVar.theLayer);
+    std::swap(this->neuralLayer, rhsVar.neuralLayer);
 }
 
 Neuron * Layer::GetNeurons()
 {
-    return theLayer;
+    return neuralLayer;
 }
 
 int Layer::GetLayerSize()
@@ -58,63 +62,71 @@ int Layer::GetLayerSize()
 	return layerSize;
 }
 
-void Layer::ResizeLayer(ImageHeader imgHdr, LabelHeader lblHdr, int inputSize)
+int Layer::GetNeuralSize()
+{
+	return neuralSize;
+}
+
+void Layer::ResizeLayer(ImageHeader imgHdr, LabelHeader lblHdr, int neuronSize)
 {
     std::cout << "Running layer resize..." << std::endl;
 
     // initialise temp neuron
     Neuron * tempNeuron;
-    tempNeuron = new Neuron[inputSize];
+    tempNeuron = new Neuron[neuronSize]();
 
     // resizing temp neuron
-    for(int ii = 0; ii < inputSize; ii += 1)
+    for(int ii = 0; ii < neuronSize; ii += 1)
     {
         std::cout << "Neuron index: " << ii << std::endl;
         tempNeuron[ii].ResizeNeuron(imgHdr, lblHdr);
     }
 
-
-    for(int ii = 0; ii < layerSize; ii += 1)
+	// copying old neurons to temp neurons
+    for(int ii = 0; ii < neuralSize; ii += 1)
     {
-        for(int jj = 0; jj < imgHdr.imgWidth; jj += 1)
+        for(int jj = 0; jj < this->neuralLayer[ii].sizeX; jj += 1)
         {
-            for(int kk = 0; kk < imgHdr.imgHeight; kk += 1)
+            for(int kk = 0; kk < this->neuralLayer[ii].sizeY; kk += 1)
             {
-                tempNeuron[ii].inputArr[jj][kk] = this->theLayer[ii].inputArr[jj][kk];
-                tempNeuron[ii].weightOne[jj][kk] = this->theLayer[ii].weightOne[jj][kk];
+                tempNeuron[ii].inputArr[jj][kk] = this->neuralLayer[ii].inputArr[jj][kk];
+                tempNeuron[ii].weightOne[jj][kk] = this->neuralLayer[ii].weightOne[jj][kk];
             }
         }
 
     }
 
-    layerSize = inputSize;
+    neuralSize = neuronSize;
 
     std::cout << "Deleting the layer" << std::endl;
-    delete theLayer;
+    
+	delete [] neuralLayer; // offending code ?
+
     std::cout << "Finish deleting the layer" << std::endl;
 
-    theLayer = new Neuron[inputSize]; // here is the offending declaration causes desstructors to run
-
-    for(int ii = 0; ii < inputSize; ii += 1)
+	//neuralLayer = tempNeuron; //did not work before
+    neuralLayer = new Neuron[neuronSize]; // here is the offending declaration causes destructors to run
+	
+    for(int ii = 0; ii < neuronSize; ii += 1)
     {
-        theLayer[ii].ResizeNeuron(imgHdr, lblHdr);
+        neuralLayer[ii].ResizeNeuron(imgHdr, lblHdr);
     }
 
-    for(int ii = 0; ii < inputSize; ii += 1)
+	// performing deep copy - copying temp data into resized layer
+    for(int ii = 0; ii < neuronSize; ii += 1)
     {
         for(int jj = 0; jj < imgHdr.imgWidth; jj += 1)
         {
             for(int kk = 0; kk < imgHdr.imgHeight; kk += 1)
             {
-                theLayer[ii].inputArr[jj][kk] = tempNeuron[ii].inputArr[jj][kk];
-                theLayer[ii].weightOne[jj][kk] = tempNeuron[ii].weightOne[jj][kk];
+                neuralLayer[ii].inputArr[jj][kk] = tempNeuron[ii].inputArr[jj][kk];
+                neuralLayer[ii].weightOne[jj][kk] = tempNeuron[ii].weightOne[jj][kk];
             }
         }
 
     }
-
+	
     std::cout << "deleting tempNeurons... " << std::endl;
-
     delete[] tempNeuron;
 
     std::cout << "Finished resizing layer..." << std::endl;

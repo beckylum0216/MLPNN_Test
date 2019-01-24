@@ -14,35 +14,47 @@ class Perceptron {
         Perceptron();
         Perceptron(ImageHeader imgHdr, LabelHeader lblHdr, int layerSize, int neuronSize);
         ~Perceptron();
+		//getters and setters
         Layer * GetLayer();
+		int GetLayerCount();
+		int GetNeuronCount();
+
         // initialising layer
-        void InitLayer(ImageHeader imgHdr, LabelHeader lblHdr, int layerSize,int neuronSize);
-        void InitSigmoidLayer(ImageHeader imgHdr, int neuronSize);
+        void InitLayer_Random();
+		void InitLayer_KaiMing(int neuronSize);
+		void InitLayer_Xavier();
+		GLdouble BoxMullerTransform();
+		GLdouble UniformRandom();
+
+        void InitSigmoidLayer_Xavier(ImageHeader imgHdr, int neuronSize);
 
         void ResizePerceptron(ImageHeader imgHdr, LabelHeader lblHdr, int layerSize, int neuronSize);
 
         GLdouble SigmoidFunction(GLdouble targetInput);
 
         //training perceptron
-        void SetLayer(GLdouble** imgInput, ImageHeader imgHdr, int layerSize,int neuronSize);
-        void SetLabel(GLdouble * lblInput, LabelHeader lblHdr);
-        void ForwardPropagation(ImageHeader imgHdr, int layerSize, int neuronSize);
-        void CalculateOutput(ImageHeader imgHdr, int layerSize, int neuronSize);
-        GLdouble CalculateError(ImageHeader imgHdr, int targetLayer, int targetNeuron);
-        void UpdateNeuronWeights(ImageHeader imgHdr, int targetLayer, int targetNeuron, GLdouble stdError, GLdouble learningRate);
 
+		// SetLayer is suspect
+        void SetLayer(GLdouble** imgInput);
+        void SetLabel(GLdouble * lblInput, LabelHeader lblHdr);
+        void ForwardPropagation();
+        void CalculateOutput(ImageHeader imgHdr, int layerSize, int neuronSize);
+        GLdouble CalculateError(ImageHeader imgHdr, int targetLabel);
+        void UpdateNeuronWeights(ImageHeader imgHdr, GLdouble stdError, GLdouble learningRate);
 
         // testing perceptron
         std::vector <GLdouble> SetTargetOutput(int targetIndex, int outputSize);
-        int  GetLayerPrediction(int layerSize, int neuronSize);
+        int  GetLayerPrediction();
 
     private:
         Layer * theLayer;
         Layer * sigmoidLayer;
-
-        int layerSize;
-        GLdouble * imgLbl;
-
+		GLdouble * imgLbl;
+		ImageHeader imageHdr;
+		LabelHeader labelHdr;
+		int layerCount;
+		int neuronCount;
+        
 };
 
 
