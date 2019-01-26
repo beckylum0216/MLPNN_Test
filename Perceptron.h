@@ -37,13 +37,20 @@ class Perceptron {
 		// SetLayer is suspect
         void SetLayer(GLdouble** imgInput);
         void SetLabel(GLdouble * lblInput, LabelHeader lblHdr);
-        void ForwardPropagation();
-        void CalculateOutput(ImageHeader imgHdr, int layerSize, int neuronSize);
+       
+		void ForwardPropagation();
+		void ForwardSigmoidPropagation();
+
         GLdouble CalculateError(ImageHeader imgHdr, int targetLabel);
+		GLdouble CalculateSigmoidError(ImageHeader imgHdr, int targetLabel);
+
+		GLdouble DerivativeLayer(ImageHeader imgHdr, int layerSize, int neuronSize);
+		GLdouble DerivativeSigmoid(ImageHeader imgHdr, int layerSize, int neuronSize);
+
         void UpdateNeuronWeights(ImageHeader imgHdr, GLdouble stdError, GLdouble learningRate);
+		void UpdateSigmoidWeights(ImageHeader imgHdr, GLdouble stdError, GLdouble learningRate);
 
         // testing perceptron
-        std::vector <GLdouble> SetTargetOutput(int targetIndex, int outputSize);
         int  GetLayerPrediction();
 		int  GetSigmoidLayerPrediction();
 

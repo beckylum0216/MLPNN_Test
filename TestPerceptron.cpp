@@ -343,6 +343,7 @@ TEST(TestSuite003Perceptron, DISABLED_TestPerceptron008_BackPropagation)
 			oneLayerNN->UpdateNeuronWeights(imgHdr, stdError, 0.0001);
 		}
 	}
+
 	
 
 	
@@ -382,7 +383,7 @@ TEST(TestSuite003Perceptron, TestPerceptron009_Classifier)
 			tempImgMatrix[ii][jj] = new GLdouble[imgHdr.imgWidth]();
 		}
 	}
-	/*
+	
 	tempImgMatrix = getFiles.ReadImageFile(imgFile, imgHdr);
 
 	oneLayerNN->InitLayer_Xavier();
@@ -390,29 +391,33 @@ TEST(TestSuite003Perceptron, TestPerceptron009_Classifier)
 
 	// training neural net
 	std::cout << "Training neural net..." << std::endl;
-	for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
+	for (int ii = 0; ii < 5000; ii += 1)
 	{
-
-
+		// adding inputs
 		oneLayerNN->SetLayer(tempImgMatrix[ii]);
 
+		// training one hidden layer
 		oneLayerNN->ForwardPropagation();
 		GLdouble stdError = oneLayerNN->CalculateError(imgHdr, ii);
-
-		//std::cout << "Std Error: " << stdError << std::endl;
-
 		oneLayerNN->UpdateNeuronWeights(imgHdr, stdError, 0.0001);
+
+		// training sigmoid layer
+		oneLayerNN->ForwardSigmoidPropagation();
+		GLdouble stdSigmoidError = oneLayerNN->CalculateSigmoidError(imgHdr, ii);
+		oneLayerNN->UpdateSigmoidWeights(imgHdr, stdSigmoidError, 0.0001);
 
 		std::cout << "Image index: " << ii << std::endl;
 	}
-	*/
+	
 
+	/*
 	// loading pre-trained weights
 	for (int aa = 0; aa < oneLayerNN->GetLayer()->GetNeuralSize(); aa += 1)
 	{
 		oneLayerNN->GetLayer()->GetNeurons()[aa].weightOne = getFiles.ReadCSVFile(oneLayerNN->GetLayer()->GetNeuralSize(), imgHdr);
+
 	}
-	
+	*/
 
 	// testing neural net
 	ImageHeader testImgHdr;
@@ -429,7 +434,7 @@ TEST(TestSuite003Perceptron, TestPerceptron009_Classifier)
 
 
 	GLdouble *** testImgMatrix = new GLdouble **[testImgHdr.maxImages]();
-	for (int ii = 0; ii < testImgHdr.maxImages; ii += 1)
+	for (int ii = 0; ii < 1000; ii += 1)
 	{
 		testImgMatrix[ii] = new GLdouble*[testImgHdr.imgWidth]();
 		for (int jj = 0; jj < testImgHdr.imgHeight; jj += 1)
@@ -447,10 +452,8 @@ TEST(TestSuite003Perceptron, TestPerceptron009_Classifier)
 	{
 
 		oneLayerNN->SetLayer(testImgMatrix[ii]);
-
 		oneLayerNN->ForwardPropagation();
-		
-		oneLayerNN->CalculateOutput(testImgHdr, 1, 10);
+		oneLayerNN->ForwardSigmoidPropagation();
 
 		int testPrediction = oneLayerNN->GetSigmoidLayerPrediction();
 
