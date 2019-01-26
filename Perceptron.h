@@ -45,6 +45,7 @@ class Perceptron {
         // testing perceptron
         std::vector <GLdouble> SetTargetOutput(int targetIndex, int outputSize);
         int  GetLayerPrediction();
+		int  GetSigmoidLayerPrediction();
 
     private:
         Layer * theLayer;
@@ -54,6 +55,8 @@ class Perceptron {
 		LabelHeader labelHdr;
 		int layerCount;
 		int neuronCount;
+
+		GLdouble sumOfMSE;
         
 };
 

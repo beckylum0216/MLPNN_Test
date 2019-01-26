@@ -17,6 +17,7 @@ Perceptron::Perceptron()
 	imgLbl = new GLdouble[1]();
 	layerCount = 1;
 	neuronCount = 1;
+	sumOfMSE = 0.00;
 
 }
 
@@ -38,11 +39,18 @@ Perceptron::Perceptron(ImageHeader imgHdr, LabelHeader lblHdr, int layerSize, in
 
     sigmoidLayer = new Layer(imgHdr, lblHdr, neuronSize);
 
+	for (int jj = 0; jj < neuronSize; jj += 1)
+	{
+		sigmoidLayer->ResizeLayer(imgHdr, lblHdr, neuronSize);
+	}
+
+
 	imageHdr = imgHdr;
 	labelHdr = lblHdr;
 
 	layerCount = layerSize;
 	neuronCount = neuronSize;
+	sumOfMSE = 0.00;
 }
 
 Perceptron::~Perceptron()
@@ -225,6 +233,7 @@ GLdouble Perceptron::UniformRandom()
 	return tempResult;
 }
 
+// this is just bad planning need to refactor into layer
 void Perceptron::InitSigmoidLayer_Xavier(ImageHeader imgHdr, int neuronSize)
 {
 
@@ -341,6 +350,7 @@ void Perceptron::ForwardPropagation()
     }
 }
 
+
 void Perceptron::CalculateOutput(ImageHeader imgHdr, int layerSize, int neuronSize)
 {
     for(int hh = 0; hh < layerSize; hh += 1)
@@ -362,14 +372,25 @@ void Perceptron::CalculateOutput(ImageHeader imgHdr, int layerSize, int neuronSi
 }
 
 // calculate the std error
-// this is suspect - error is huge!!!
 GLdouble Perceptron::CalculateError(ImageHeader imgHdr, int targetLabel)
 {
-    GLdouble  tempError;
+    GLdouble tempError = 0.00;
+	GLdouble tempMSE = 0.00;
+	GLdouble mseResult = 0.00;
 
-    tempError = imgLbl[targetLabel] - GetLayerPrediction();
+    tempError = GetLayerPrediction() - imgLbl[targetLabel];
+	tempMSE = tempError * tempError;
 
-    return tempError;
+	//std::cout << "tempMSE: " << tempMSE << std::endl;
+
+	sumOfMSE += tempMSE;
+
+	//std::cout << "sumOfMSE: " << sumOfMSE << std::endl;
+
+
+	mseResult = sumOfMSE / (GLdouble)(imgHdr.maxImages * imgHdr.imgWidth * imgHdr.imgHeight);
+	
+    return mseResult;
 }
 
 void Perceptron::UpdateNeuronWeights(ImageHeader imgHdr, GLdouble stdError, GLdouble learningRate)
@@ -385,7 +406,7 @@ void Perceptron::UpdateNeuronWeights(ImageHeader imgHdr, GLdouble stdError, GLdo
 					GLdouble tempSGD = learningRate * theLayer[hh].GetNeurons()[ii].weightOne[jj][kk] * stdError;
 					theLayer[hh].GetNeurons()[ii].weightOne[jj][kk] += tempSGD;
 
-					std::cout << "Updated Neuron: " << theLayer[hh].GetNeurons()[ii].weightOne[jj][kk] << std::endl;
+					//std::cout << "Updated weight: " << theLayer[hh].GetNeurons()[ii].weightOne[jj][kk] << std::endl;
 					//sigmoidLayer->GetNeurons()[targetNeuron].weightOne[ii][jj] *= theLayer[targetLayer].GetNeurons()[targetNeuron].sigmoidOutput * learningRate * stdError;
 				}
 				
@@ -425,7 +446,7 @@ int Perceptron::GetLayerPrediction()
 		{
 			if (theLayer[ii].GetNeurons()[ii].sigmoidOutput > maxOutput)
 			{
-				maxOutput = theLayer[ii].GetNeurons()[jj].output;
+				maxOutput = theLayer[ii].GetNeurons()[jj].sigmoidOutput;
 				layerPrediction = jj;
 			}
 
@@ -435,3 +456,26 @@ int Perceptron::GetLayerPrediction()
 
     return layerPrediction;
 }
+
+int Perceptron::GetSigmoidLayerPrediction()
+{
+	GLdouble maxOutput = 0.0;
+	int layerPrediction = 0;
+
+
+	for (int jj = 0; jj < sigmoidLayer->GetNeuralSize(); jj += 1)
+	{
+		if (sigmoidLayer->GetNeurons()[jj].sigmoidOutput > maxOutput)
+		{
+			maxOutput = sigmoidLayer->GetNeurons()[jj].sigmoidOutput;
+			layerPrediction = jj;
+		}
+
+	}
+
+	std::cout << "Sigmoid probability: " << maxOutput << std::endl;
+	std::cout << "Sigmoid prediction: " << layerPrediction << std::endl;
+
+	return layerPrediction;
+}
+

@@ -215,3 +215,97 @@ void UtilityFunctions::DisplayImage(GLdouble **targetImage, ImageHeader imgHdr)
 
     glFlush();
 }
+
+
+void UtilityFunctions::WriteWeightOutput(int neuronIndex, GLdouble ** targetWeight, ImageHeader imgHdr)
+{
+	std::ofstream outputFile;
+	
+	std::string namu = "murdochnet";
+	std::stringstream neurontext;
+	neurontext << neuronIndex;
+	std::string fileName = namu + neurontext.str() + ".csv";
+	std::string delimiter = ",";
+
+	outputFile.open(fileName);
+
+	for (int ii = 0; ii < imgHdr.imgWidth; ii += 1)
+	{
+		for (int jj = 0; jj < imgHdr.imgHeight; jj += 1)
+		{
+			
+
+			std::ostringstream tempnum;
+			tempnum << std::fixed;
+			tempnum << std::setprecision(15);
+			tempnum << targetWeight[ii][jj];
+			std::string num = tempnum.str();
+			outputFile << num;
+
+			if (jj < imgHdr.imgHeight)
+			{
+				outputFile << delimiter;
+			}
+			
+		}
+
+		outputFile << std::endl;
+	}
+
+	outputFile.close();
+
+}
+
+GLdouble ** UtilityFunctions::ReadCSVFile(int neuronSize, ImageHeader imgHdr)
+{
+
+
+	GLdouble ** tempWeightMatrix = new GLdouble*[imgHdr.imgWidth]();
+	for (int ii = 0; ii < imgHdr.imgHeight; ii += 1)
+	{
+		tempWeightMatrix[ii] = new GLdouble[imgHdr.imgHeight]();
+	}
+
+
+	for (int aa = 0; aa < neuronSize; aa += 1)
+	{
+		std::string namu = "murdochnet";
+		std::stringstream neurontext;
+		neurontext << aa;
+		std::string fileName = namu + neurontext.str() + ".csv";
+		std::string delimiter = ",";
+		std::ifstream inputFile;
+
+		inputFile.open(fileName);
+
+		for (int bb = 0; bb < imgHdr.imgWidth; bb += 1)
+		{
+			for (int cc = 0; cc < imgHdr.imgHeight; cc += 1)
+			{
+
+				std::string tempInput;
+				GLdouble inputWeight;
+
+				
+				if (cc < imgHdr.imgHeight-1)
+				{
+					std::getline(inputFile, tempInput, ',');
+					inputWeight = std::stod(tempInput);
+					tempWeightMatrix[bb][cc] = inputWeight;
+				}
+				else
+				{
+					std::getline(inputFile, tempInput);
+					inputWeight = std::stod(tempInput);
+					tempWeightMatrix[bb][cc] = inputWeight;
+				}
+				
+
+			}
+		}
+
+	}
+	
+
+	return tempWeightMatrix;
+}

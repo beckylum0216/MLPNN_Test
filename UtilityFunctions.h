@@ -8,6 +8,9 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <sstream>
+#include <iomanip>
+#include <string>
 #include <GL/freeglut.h>
 #include "ImageHeader.h"
 #include "LabelHeader.h"
@@ -25,8 +28,9 @@ class UtilityFunctions {
         void DeallocateMemory();
         void DisplayImage(GLdouble ** targetImage, ImageHeader imgHdr);
 
+		void WriteWeightOutput(int neuronIndex, GLdouble ** targetWeights, ImageHeader imgHdr);
 
-
+		GLdouble ** ReadCSVFile(int neuronSize, ImageHeader imgHdr);
 
 
     private:
