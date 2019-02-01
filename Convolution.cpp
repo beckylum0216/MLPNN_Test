@@ -4,7 +4,7 @@
 
 #include "Convolution.h"
 
-Convolution::Convolution(ImageHeader imgHdr, int layerSize, int neuronSize)
+Convolution::Convolution(ImageHeader imgHdr)
 {
 
 
@@ -32,7 +32,7 @@ Convolution::~Convolution()
     delete[] gaussConvolution;
 }
 
-GLdouble ** Convolution::GaussianFilter(GLdouble **imgInput, ImageHeader imgHdr, int layerSize, int neuronSize)
+GLdouble ** Convolution::GaussianFilter(GLdouble **imgInput, ImageHeader imgHdr)
 {
     GLdouble kernelGauss[3][3] = {{0.0625, 0.125, 0.0625}, {0.125, 0.5, 0.125}, {0.0625, 0.125, 0.0625}};
 
@@ -54,13 +54,13 @@ GLdouble ** Convolution::GaussianFilter(GLdouble **imgInput, ImageHeader imgHdr,
 }
 
 
-GLdouble ** Convolution::MaxPooling(GLdouble **imgInput, ImageHeader imgHdr, int layerSize, int neuronSize)
+GLdouble ** Convolution::MaxPooling(GLdouble **imgInput, ImageHeader imgHdr)
 {
     for(int ii = 1; ii < imgHdr.imgWidth; ii += 1)
     {
         for(int jj = 1; jj < imgHdr.imgHeight; jj += 1)
         {
-            maxPool[ii][jj] = Maxima(imgInput, imgHdr, ii, jj);
+            maxPool[ii][jj] = Maxima(imgInput, ii, jj);
 
         }
     }
@@ -68,7 +68,7 @@ GLdouble ** Convolution::MaxPooling(GLdouble **imgInput, ImageHeader imgHdr, int
     return maxPool;
 }
 
-GLdouble Convolution::Maxima(GLdouble **imgInput, ImageHeader imgHdr, int inputX, int inputY)
+GLdouble Convolution::Maxima(GLdouble **imgInput, int inputX, int inputY)
 {
     GLdouble  maxResult = 0.00;
 

@@ -31,7 +31,7 @@ TEST(Suite001Neuron, TestNeuron002)
 	lblHdr.magicNumber = 0;
 	lblHdr.maxLabels = 50;
 
-	objCreation.ResizeNeuron(imgHdr, lblHdr);
+	objCreation.ResizeNeuron(imgHdr);
 	
 	SUCCEED();
 }

@@ -11,11 +11,11 @@
 
 class Convolution {
     public:
-        Convolution(ImageHeader imgHdr, int layerSize, int neuronSize);
+        Convolution(ImageHeader imgHdr);
         ~Convolution();
-        GLdouble ** GaussianFilter(GLdouble ** imgInput, ImageHeader imgHdr, int layerSize, int neuronSize);
-        GLdouble ** MaxPooling(GLdouble ** imgInput, ImageHeader imgHdr, int layerSize, int neuronSize);
-        GLdouble Maxima(GLdouble ** imgInput, ImageHeader imgHdr, int inputX, int inputY);
+        GLdouble ** GaussianFilter(GLdouble ** imgInput, ImageHeader imgHdr);
+        GLdouble ** MaxPooling(GLdouble ** imgInput, ImageHeader imgHdr);
+        GLdouble Maxima(GLdouble ** imgInput, int inputX, int inputY);
 
     private:
         GLdouble ** gaussConvolution;

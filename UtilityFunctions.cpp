@@ -45,7 +45,8 @@ ImageHeader UtilityFunctions::ReadImageHeader(std::string theFile)
     imageHdr.imgWidth = 0;
     imageHdr.imgHeight = 0;
 
-    if(imageFile.is_open()) {
+    if(imageFile.is_open())
+    {
         imageFile.read((char *) &imageHdr.magicNumber, sizeof(imageHdr.magicNumber));
         imageHdr.magicNumber = ReverseByte(imageHdr.magicNumber);
         imageFile.read((char *) &imageHdr.maxImages, sizeof(imageHdr.maxImages));
@@ -54,6 +55,10 @@ ImageHeader UtilityFunctions::ReadImageHeader(std::string theFile)
         imageHdr.imgWidth = ReverseByte(imageHdr.imgWidth);
         imageFile.read((char *) &imageHdr.imgHeight, sizeof(imageHdr.imgHeight));
         imageHdr.imgHeight = ReverseByte(imageHdr.imgHeight);
+    }
+    else
+    {
+        std::cout << "File failed to open!" << std::endl;
     }
 
     imageFile.close();
@@ -131,7 +136,10 @@ GLdouble*** UtilityFunctions::ReadImageFile(std::string theFile, ImageHeader ima
                 {
                     unsigned char temp = 0;
                     imageFile.read((char*) &temp, sizeof(temp));
-                    imgMatrix[ii][jj][kk] = temp;
+                    //std::cout << "unsigned temp input: " << temp << std::endl;
+                    imgMatrix[ii][jj][kk] = (double)temp;
+                    //std::cout << "double temp input: " << imgMatrix[ii][jj][kk] << std::endl;
+
                 }
             }
         }
@@ -163,8 +171,9 @@ GLdouble * UtilityFunctions::ReadLabelFile(std::string theFile, LabelHeader labe
         {
             unsigned char temp = 0;
             labelFile.read((char*) &temp, sizeof(temp));
-            lblMatrix[ii] = (int) temp;
+            lblMatrix[ii] = (GLdouble) temp;
 
+            //std::cout << "label index:" << ii << " label: " << lblMatrix[ii] << std::endl;
         }
     }
 
@@ -207,9 +216,7 @@ void UtilityFunctions::DisplayImage(GLdouble **targetImage, ImageHeader imgHdr)
         }
     }
 
-
-
-    glDrawPixels(imgHdr.imgWidth, imgHdr.maxImages, GL_LUMINANCE, GL_UNSIGNED_BYTE, tempImage); //image_buf
+    glDrawPixels(imgHdr.imgWidth, imgHdr.imgWidth, GL_LUMINANCE, GL_UNSIGNED_BYTE, tempImage); //image_buf
 
     delete [] tempImage;
 
