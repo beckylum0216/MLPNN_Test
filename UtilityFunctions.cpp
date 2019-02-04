@@ -137,7 +137,9 @@ GLdouble*** UtilityFunctions::ReadImageFile(std::string theFile, ImageHeader ima
                     unsigned char temp = 0;
                     imageFile.read((char*) &temp, sizeof(temp));
                     //std::cout << "unsigned temp input: " << temp << std::endl;
-                    imgMatrix[ii][jj][kk] = (double)temp;
+
+					// may need to double check - changed to a number between 0 and 1
+                    imgMatrix[ii][jj][kk] = (GLdouble)temp/255;
                     //std::cout << "double temp input: " << imgMatrix[ii][jj][kk] << std::endl;
 
                 }

@@ -49,9 +49,13 @@ class Layer {
 
 		void SetLayer(GLdouble** imgInput);
 
+		void SetLayerBias(GLdouble imgBias);
+
 		void SetImgLbl(GLdouble * lblInput);
 
 		void ForwardPropagation();
+
+		GLdouble ** CollateHiddenResult(ImageHeader imgHdr);
 
 		int  GetLayerPrediction();
 

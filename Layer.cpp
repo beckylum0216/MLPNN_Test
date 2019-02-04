@@ -297,14 +297,34 @@ void Layer::SetLayer(GLdouble** imgInput)
 
 }
 
+void Layer::SetLayerBias(GLdouble imgBias)
+{
+	// perform deep copy
+	for (int ii = 0; ii < neuralSize; ii += 1)
+	{
+		for (int jj = 0; jj < imageHdr.imgWidth; jj += 1)
+		{
+			for (int kk = 0; kk < imageHdr.imgHeight; kk += 1)
+			{
+				neuralLayer[ii].inputArray[jj][kk] = imgBias;
+
+				//std::cout << "neuron index: " << ii << " deep copy input: " << neuralLayer[ii].inputArray[jj][kk] << std::endl;
+			}
+		}
+	}
+
+}
+
 void Layer::SetImgLbl(GLdouble * lblInput)
 {
     for(int ii = 0; ii < labelHdr.maxLabels; ii += 1)
     {
         imgLbl[ii] = lblInput[ii];
-        std::cout << "lbl index: " << ii << " label: " << imgLbl[ii] << " lbl input: " << lblInput[ii] <<std::endl;
+        //std::cout << "lbl index: " << ii << " label: " << imgLbl[ii] << " lbl input: " << lblInput[ii] <<std::endl;
     }
 }
+
+
 
 // https://becominghuman.ai/neural-network-xor-application-and-fundamentals-6b1d539941ed
 void Layer::ForwardPropagation()
@@ -324,15 +344,33 @@ void Layer::ForwardPropagation()
 		//std::cout << "Dot Multiply: " << ba.DotMultiply(imageHdr, neuralLayer[ii].inputArray, neuralLayer[ii].weightOne) << std::endl;
 
         neuralLayer[ii].output = tempOutput + neuralLayer[ii].bias;
-        std::cout << "index: " << ii << " Neuron output: " << neuralLayer[ii].output << std::endl;
+        //std::cout << "index: " << ii << " Neuron output: " << neuralLayer[ii].output << std::endl;
 
         tempSigmoid = ba.SigmoidFunction(neuralLayer[ii].output);
 
         neuralLayer[ii].sigmoidOutput = tempSigmoid;
 
-        //std::cout << "index: " << ii << " sigmoid output: " << neuralLayer[ii].sigmoidOutput << std::endl;
+        std::cout << "index: " << ii << " sigmoid output: " << neuralLayer[ii].sigmoidOutput << " Neuron output: " << neuralLayer[ii].output << std::endl;
     }
+}
 
+GLdouble ** Layer::CollateHiddenResult(ImageHeader imgHdr)
+{
+	GLdouble ** trainHiddenResult = new GLdouble *[imgHdr.imgWidth]();
+	for (int aa = 0; aa < imgHdr.imgWidth; aa += 1)
+	{
+		trainHiddenResult[aa] = new GLdouble[imgHdr.imgHeight]();
+	}
+
+	for (int ii = 0; ii < 1; ii += 1)
+	{
+		for (int jj = 0; jj < imgHdr.imgHeight; jj += 1)
+		{
+			trainHiddenResult[ii][jj] = neuralLayer[jj].sigmoidOutput;
+		}
+	}
+
+	return trainHiddenResult;
 }
 
 int Layer::GetLayerPrediction()
@@ -415,7 +453,7 @@ GLdouble Layer::CalculateDerivative()
         tempResult = neuralLayer[ii].sigmoidOutput * (1 - neuralLayer[ii].sigmoidOutput);
 		neuralLayer[ii].derivativeOutput = tempResult;
 
-        std::cout << "derivative Output: " << tempResult << std::endl;
+        //std::cout << "derivative Output: " << tempResult << std::endl;
 
     }
 
@@ -444,7 +482,7 @@ void Layer::UpdateNeuronWeights(GLdouble stdError, GLdouble learningRate)
 				
 				neuralLayer[ii].weightOne[jj][kk] += tempSGD;
 
-                std::cout << "Update Index: "<< ii << " Error Output: " << neuralLayer[ii].errorOutput <<" Updated weight: " << neuralLayer[ii].weightOne[jj][kk] << std::endl;
+                //std::cout << "Update Index: "<< ii << " Error Output: " << neuralLayer[ii].errorOutput <<" Updated weight: " << neuralLayer[ii].weightOne[jj][kk] << std::endl;
             }
         }
 	}
@@ -475,15 +513,15 @@ void Layer::BackpropagationHidden(GLdouble sumOfError, GLdouble stdError, GLdoub
 			for (int kk = 0; kk < imageHdr.imgHeight; kk += 1)
 			{
 				neuralLayer[ii].errorOutput = -1 * stdError * neuralLayer[ii].derivativeOutput * neuralLayer[ii].weightOne[jj][kk];
-				std::cout << "Hidden Error output: " << neuralLayer[ii].errorOutput << std::endl;;
+				//std::cout << "Hidden Error output: " << neuralLayer[ii].errorOutput << std::endl;;
 
 				GLdouble tempSGD = -1 * learningRate * neuralLayer[ii].derivativeOutput * sumOfError * neuralLayer[ii].inputArray[jj][kk];
 
-				std::cout << "hidden SGD: " << tempSGD << " hidden derivative: " << neuralLayer[ii].derivativeOutput << " input: " << neuralLayer[ii].inputArray[jj][kk] << " prior layer total error: " << sumOfError <<std::endl;
+				//std::cout << "hidden SGD: " << tempSGD << " hidden derivative: " << neuralLayer[ii].derivativeOutput << " input: " << neuralLayer[ii].inputArray[jj][kk] << " prior layer total error: " << sumOfError <<std::endl;
 				
 				neuralLayer[ii].weightOne[jj][kk] += tempSGD;
 
-				std::cout << "New hidden weight: " << neuralLayer[ii].weightOne[jj][kk] << std::endl;
+				//std::cout << "New hidden weight: " << neuralLayer[ii].weightOne[jj][kk] << std::endl;
 
 			}
 		}

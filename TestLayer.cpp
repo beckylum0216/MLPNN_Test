@@ -382,33 +382,53 @@ TEST(TestSuite003Layer, DISABLED_TestLayer010_BackPropagation)
 	SUCCEED();
 }
 
-TEST(TestSuite002Layer, DISABLED_TestLayer011_Classifier)
+TEST(TestSuite002Layer, TestLayer011_Classifier)
 {
-	int count = 0;
+	GLdouble learningRate = 0.1;
+	GLdouble layerBias = 1.00;
 	ImageHeader imgHdr;
+	ImageHeader imgHdr1;
+	ImageHeader imgHdr2;
+	ImageHeader imgHdr3;
+
 	LabelHeader lblHdr;
 	ImageHeader outputHdr;
 
 	std::string imgFile = "../mnist/train-images.idx3-ubyte";
 	std::string lblFile = "../mnist/train-labels.idx1-ubyte";
 
-	int hiddenSize = 20;
+	int hiddenSize = 300;
+	int hiddenSize1 = 80;
+	int hiddenSize2 = 40;
+	int hiddenSize3 = 20;
+
 	int outputSize = 10;
 
 	UtilityFunctions getFiles;
-
-	imgHdr = getFiles.ReadImageHeader(imgFile);
 	lblHdr = getFiles.ReadLabelHeader(lblFile);
+	imgHdr = getFiles.ReadImageHeader(imgFile);
+	
+	imgHdr1.maxImages = imgHdr.maxImages;
+	imgHdr1.imgWidth = 1;
+	imgHdr1.imgHeight = hiddenSize;
 
-	outputHdr.maxImages = hiddenSize;
+	imgHdr2.maxImages = hiddenSize;
+	imgHdr2.imgWidth = 1;
+	imgHdr2.imgHeight = hiddenSize1;
+
+	imgHdr3.maxImages = hiddenSize1;
+	imgHdr3.imgWidth = 1;
+	imgHdr3.imgHeight = hiddenSize2;
+
+	outputHdr.maxImages = hiddenSize2;
 	outputHdr.imgWidth = 1;
-	outputHdr.imgHeight = hiddenSize;
+	outputHdr.imgHeight = hiddenSize3;
 
 	Layer * oneLayerNN = new Layer(imgHdr, lblHdr, lblHdr.maxLabels, hiddenSize);
+	Layer * twoLayerNN = new Layer(imgHdr1, lblHdr, lblHdr.maxLabels, hiddenSize1);
+	Layer * threeLayerNN = new Layer(imgHdr2, lblHdr, lblHdr.maxLabels, hiddenSize2);
+	Layer * fourLayerNN = new Layer(imgHdr3, lblHdr, lblHdr.maxLabels, hiddenSize3);
 	Layer * outputLayer = new Layer(outputHdr, lblHdr, lblHdr.maxLabels, outputSize);
-
-	oneLayerNN->SetImgLbl(getFiles.ReadLabelFile(lblFile, lblHdr));
-	outputLayer->SetImgLbl(getFiles.ReadLabelFile(lblFile, lblHdr));
 
 	GLdouble *** tempImgMatrix = new GLdouble **[imgHdr.maxImages]();
 	for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
@@ -423,44 +443,92 @@ TEST(TestSuite002Layer, DISABLED_TestLayer011_Classifier)
 	tempImgMatrix = getFiles.ReadImageFile(imgFile, imgHdr);
 
 	oneLayerNN->InitLayer_Xavier();
+	twoLayerNN->InitLayer_Xavier();
+	threeLayerNN->InitLayer_Xavier();
+	fourLayerNN->InitLayer_Xavier();
 	outputLayer->InitLayer_Xavier();
+
+
+	oneLayerNN->SetLayerBias(layerBias);
+	twoLayerNN->SetLayerBias(layerBias);
+	threeLayerNN->SetLayerBias(layerBias);
+	fourLayerNN->SetLayerBias(layerBias);
+	outputLayer->SetLayerBias(layerBias);
+
+	// copying image labels for correction 
+	oneLayerNN->SetImgLbl(getFiles.ReadLabelFile(lblFile, lblHdr));
+	twoLayerNN->SetImgLbl(getFiles.ReadLabelFile(lblFile, lblHdr));
+	threeLayerNN->SetImgLbl(getFiles.ReadLabelFile(lblFile, lblHdr));
+	fourLayerNN->SetImgLbl(getFiles.ReadLabelFile(lblFile, lblHdr));
+	outputLayer->SetImgLbl(getFiles.ReadLabelFile(lblFile, lblHdr));
+
 
 	// training neural net
 	std::cout << "Training neural net..." << std::endl;
 	for (int epoch = 0; epoch < 3; epoch += 1)
 	{
+		int count = 0;
 		for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
 		{
+			// training one hidden layer
 			// adding inputs
 			oneLayerNN->SetLayer(tempImgMatrix[ii]);
-
-			// training one hidden layer
 			oneLayerNN->ForwardPropagation();
-			GLdouble stdError = oneLayerNN->CalculateMNISTError(ii);
-			oneLayerNN->UpdateNeuronWeights(stdError, 0.0001);
+			//GLdouble stdError = oneLayerNN->CalculateMNISTError(ii);
 
-			GLdouble ** trainHiddenResult = new GLdouble *[outputHdr.imgWidth]();
-			for (int aa = 0; aa < outputHdr.imgWidth; aa += 1)
-			{
-				trainHiddenResult[aa] = new GLdouble[outputHdr.imgHeight]();
-			}
+			twoLayerNN->SetLayer(oneLayerNN->CollateHiddenResult(imgHdr1));
+			twoLayerNN->ForwardPropagation();
 
-			for (int ii = 0; ii < outputHdr.imgWidth; ii += 1)
-			{
-				for (int jj = 0; jj < outputHdr.imgHeight; jj += 1)
-				{
-					trainHiddenResult[ii][jj] = oneLayerNN->GetNeurons()[jj].sigmoidOutput;
-				}
-			}
+			threeLayerNN->SetLayer(twoLayerNN->CollateHiddenResult(imgHdr2));
+			threeLayerNN->ForwardPropagation();
+
+			fourLayerNN->SetLayer(threeLayerNN->CollateHiddenResult(imgHdr3));
+			fourLayerNN->ForwardPropagation();
 
 			// training sigmoid layer
-			outputLayer->SetLayer(trainHiddenResult);
+			outputLayer->SetLayer(fourLayerNN->CollateHiddenResult(outputHdr));
 			outputLayer->ForwardPropagation();
+
 			GLdouble stdSigmoidError = outputLayer->CalculateMNISTError(ii);
-			outputLayer->UpdateNeuronWeights(stdSigmoidError, 0.0001);
+			outputLayer->UpdateNeuronWeights(stdSigmoidError, learningRate);
+
+			GLdouble stdHiddenErrorFour = fourLayerNN->CalculateMNISTError(ii);
+			GLdouble errorLayerOutput = outputLayer->TotalLayerError();
+			fourLayerNN->BackpropagationHidden(errorLayerOutput, stdHiddenErrorFour, learningRate);
+
+			GLdouble stdHiddenErrorThree = threeLayerNN->CalculateMNISTError(ii);
+			GLdouble errorLayerFour = fourLayerNN->TotalLayerError();
+			threeLayerNN->BackpropagationHidden(errorLayerFour, stdHiddenErrorThree, learningRate);
+
+			GLdouble stdHiddenErrorTwo = twoLayerNN->CalculateMNISTError(ii);
+			GLdouble errorLayerThree = threeLayerNN->TotalLayerError();
+			twoLayerNN->BackpropagationHidden(errorLayerThree, stdHiddenErrorTwo, learningRate);
+
+			GLdouble stdHiddenErrorOne = oneLayerNN->CalculateMNISTError(ii);
+			GLdouble errorLayerTwo = twoLayerNN->TotalLayerError();
+			oneLayerNN->BackpropagationHidden(errorLayerTwo, stdHiddenErrorOne, learningRate);
+
+			std::cout << "Image index: " << ii << std::endl;
+
+			int trainPrediction = outputLayer->GetLayerPrediction();
+
+			if (trainPrediction != outputLayer->GetImgLbl()[ii])
+			{
+				count++;
+			}
+
+
+			std::cout << "*********************************************************************************************" << std::endl;
+			std::cout << "Index: " << ii << " Prediction: " << trainPrediction << " Actual: " << outputLayer->GetImgLbl()[ii] << std::endl;
+			std::cout << "*********************************************************************************************" << std::endl;
 
 			std::cout << "Image index: " << ii << std::endl;
 		}
+
+		double trainErrorRate;
+		trainErrorRate = (double)count / (double)imgHdr.maxImages;
+		std::cout.precision(5);
+		std::cout << "Error Count: " << count << " % incorrect: " << std::fixed << trainErrorRate << std::endl;
 	}
 	
 
@@ -511,23 +579,16 @@ TEST(TestSuite002Layer, DISABLED_TestLayer011_Classifier)
 		oneLayerNN->SetLayer(testImgMatrix[ii]);
 		oneLayerNN->ForwardPropagation();
 
-		GLdouble ** hiddenResult = new GLdouble * [testOutputHdr.imgWidth]();
-		for (int aa = 0; aa < testOutputHdr.imgHeight; aa += 1)
-		{
-			hiddenResult[aa] = new GLdouble[testOutputHdr.imgHeight]();
-		}
+		twoLayerNN->SetLayer(oneLayerNN->CollateHiddenResult(imgHdr1));
+		twoLayerNN->ForwardPropagation();
+	
+		threeLayerNN->SetLayer(twoLayerNN->CollateHiddenResult(imgHdr2));
+		threeLayerNN->ForwardPropagation();
 
-		for (int ii = 0; ii < testOutputHdr.imgWidth; ii += 1)
-		{
-			for (int jj = 0; jj < testOutputHdr.imgHeight; jj += 1)
-			{
-				hiddenResult[ii][jj] = oneLayerNN->GetNeurons()[jj].sigmoidOutput;
-			}
-		}
-
+		fourLayerNN->SetLayer(threeLayerNN->CollateHiddenResult(imgHdr3));
+		fourLayerNN->ForwardPropagation();
 		
-		outputLayer->SetLayer(hiddenResult);
-
+		outputLayer->SetLayer(fourLayerNN->CollateHiddenResult(outputHdr));
 		outputLayer->ForwardPropagation();
 
 		int testPrediction = oneLayerNN->GetLayerPrediction();
@@ -548,7 +609,7 @@ TEST(TestSuite002Layer, DISABLED_TestLayer011_Classifier)
 	SUCCEED();
 }
 
-TEST(TestSuite002Layer, TestLayer012_XOR_Gate)
+TEST(TestSuite002Layer, DISABLED_TestLayer012_XOR_Gate)
 {
 	int count = 0;
 	ImageHeader imgHdr;
@@ -568,7 +629,7 @@ TEST(TestSuite002Layer, TestLayer012_XOR_Gate)
 	imgHdr.imgHeight = 2;
 
 	lblHdr.magicNumber = 0;
-	lblHdr.maxLabels = 4.00;
+	lblHdr.maxLabels = 4;
 
 	outputHdr.maxImages = 4;
 	outputHdr.imgWidth = 1;
@@ -655,7 +716,7 @@ TEST(TestSuite002Layer, TestLayer012_XOR_Gate)
 
 	// training neural net
 	std::cout << "Training neural net..." << std::endl;
-	for (int epoch = 0; epoch < 1; epoch += 1)
+	for (int epoch = 0; epoch < 10; epoch += 1)
 	{
 		for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
 		{
@@ -763,8 +824,8 @@ TEST(TestSuite002Layer, TestLayer012_XOR_Gate)
 
 	testImgMatrix[1][0][0] = 0;
 	testImgMatrix[1][0][1] = 0;
-	testImgMatrix[1][1][1] = 1;
-	testImgMatrix[1][0][1] = 1;
+	testImgMatrix[1][1][1] = 0;
+	testImgMatrix[1][0][1] = 0;
 
 	testImgMatrix[2][0][0] = 1;
 	testImgMatrix[2][0][1] = 1;
@@ -773,8 +834,8 @@ TEST(TestSuite002Layer, TestLayer012_XOR_Gate)
 
 	testImgMatrix[3][0][0] = 0;
 	testImgMatrix[3][0][1] = 0;
-	testImgMatrix[3][1][1] = 0;
-	testImgMatrix[3][0][1] = 0;
+	testImgMatrix[3][1][1] = 1;
+	testImgMatrix[3][0][1] = 1;
 	
 
 	int errorCount = 0;
@@ -829,613 +890,9 @@ TEST(TestSuite002Layer, TestLayer012_XOR_Gate)
 	SUCCEED();
 }
 
-TEST(TestSuite002Layer, DISABLED_TestLayer013_XOR_White)
-{
-	int count = 0;
-	ImageHeader imgHdr;
-	LabelHeader lblHdr;
-	ImageHeader outputHdr;
 
-	//std::string imgFile = "../mnist/train-images.idx3-ubyte";
-	//std::string lblFile = "../mnist/train-labels.idx1-ubyte";
 
-	int hiddenSize = 2;
-	int outputSize = 1;
-
-	UtilityFunctions getFiles;
-
-	imgHdr.maxImages = 50;
-	imgHdr.imgWidth = 2;
-	imgHdr.imgHeight = 2;
-
-	lblHdr.magicNumber = 0;
-	lblHdr.maxLabels = 50;
-
-	outputHdr.maxImages = hiddenSize;
-	outputHdr.imgWidth = 1;
-	outputHdr.imgHeight = hiddenSize;
-
-	Layer * oneLayerNN = new Layer(imgHdr, lblHdr, lblHdr.maxLabels, hiddenSize);
-	Layer * outputLayer = new Layer(outputHdr, lblHdr, lblHdr.maxLabels, outputSize);
-
-	GLdouble * xorLbl = new GLdouble[lblHdr.maxLabels]();
-	for (int ii = 0; ii < lblHdr.maxLabels; ii += 1)
-	{
-		xorLbl[ii] = 0;
-	}
-	
-
-	oneLayerNN->SetImgLbl(xorLbl);
-	outputLayer->SetImgLbl(xorLbl);
-
-	GLdouble *** tempImgMatrix = new GLdouble **[imgHdr.maxImages]();
-	for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
-	{
-		tempImgMatrix[ii] = new GLdouble*[imgHdr.imgWidth]();
-		for (int jj = 0; jj < imgHdr.imgWidth; jj += 1)
-		{
-			tempImgMatrix[ii][jj] = new GLdouble[imgHdr.imgHeight]();
-		}
-	}
-
-	for (int aa = 0; aa < imgHdr.maxImages; aa += 1)
-	{
-		for (int bb = 0; bb < imgHdr.imgWidth; bb += 1)
-		{
-			for (int cc = 0; cc < imgHdr.imgHeight; cc += 1)
-			{
-				tempImgMatrix[aa][bb][cc] = 0.00;
-			}
-		}
-	}
-
-
-
-	oneLayerNN->InitLayer_Xavier();
-	outputLayer->InitLayer_Xavier();
-
-	// training neural net
-	std::cout << "Training neural net..." << std::endl;
-	for (int epoch = 0; epoch < 100; epoch += 1)
-	{
-		for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
-		{
-			// adding inputs
-			oneLayerNN->SetLayer(tempImgMatrix[ii]);
-
-			// training one hidden layer
-			oneLayerNN->ForwardPropagation();
-			GLdouble stdError = oneLayerNN->CalculateGeneralError(ii);
-			oneLayerNN->UpdateNeuronWeights(stdError, 0.0001);
-
-			GLdouble ** trainHiddenResult = new GLdouble *[outputHdr.imgWidth]();
-			for (int aa = 0; aa < outputHdr.imgWidth; aa += 1)
-			{
-				trainHiddenResult[aa] = new GLdouble[outputHdr.imgHeight]();
-			}
-
-			for (int ii = 0; ii < outputHdr.imgWidth; ii += 1)
-			{
-				for (int jj = 0; jj < outputHdr.imgHeight; jj += 1)
-				{
-					trainHiddenResult[ii][jj] = oneLayerNN->GetNeurons()[jj].sigmoidOutput;
-				}
-			}
-
-			// training sigmoid layer
-			outputLayer->SetLayer(trainHiddenResult);
-			outputLayer->ForwardPropagation();
-			GLdouble stdSigmoidError = outputLayer->CalculateGeneralError(ii);
-			outputLayer->UpdateNeuronWeights(stdSigmoidError, 0.0001);
-
-			std::cout << "Image index: " << ii << std::endl;
-
-			int testPrediction = outputLayer->GetLayerPrediction();
-
-			std::cout << "Index: " << ii << " Prediction: " << testPrediction << " Actual: " << outputLayer->GetImgLbl()[ii] << std::endl;
-
-		}
-
-	}
-
-
-
-	/*
-	// loading pre-trained weights
-	for (int aa = 0; aa < oneLayerNN->GetLayer()->GetNeuralSize(); aa += 1)
-	{
-		oneLayerNN->GetLayer()->GetNeurons()[aa].weightOne = getFiles.ReadCSVFile(oneLayerNN->GetLayer()->GetNeuralSize(), imgHdr);
-
-	}
-	*/
-	/*
-	// testing neural net
-	ImageHeader testImgHdr;
-	ImageHeader testOutputHdr;
-	LabelHeader testLblHdr;
-
-	std::string testImgFile = "../mnist/t10k-images.idx3-ubyte";
-	std::string testLblFile = "../mnist/t10k-labels.idx1-ubyte";
-
-	testImgHdr = getFiles.ReadImageHeader(testImgFile);
-	testLblHdr = getFiles.ReadLabelHeader(testLblFile);
-
-	testOutputHdr = outputHdr;
-
-	int * testImgLbl = new int[testLblHdr.maxLabels]();
-	testImgLbl = getFiles.ReadLabelFile(testLblFile, testLblHdr);
-
-	GLdouble *** testImgMatrix = new GLdouble **[testImgHdr.maxImages]();
-	for (int ii = 0; ii < testImgHdr.maxImages; ii += 1)
-	{
-		testImgMatrix[ii] = new GLdouble*[testImgHdr.imgWidth]();
-		for (int jj = 0; jj < testImgHdr.imgHeight; jj += 1)
-		{
-			testImgMatrix[ii][jj] = new GLdouble[testImgHdr.imgWidth]();
-		}
-	}
-
-	testImgMatrix = getFiles.ReadImageFile(testImgFile, testImgHdr);
-
-	int errorCount = 0;
-
-	std::cout << "testing neural net..." << std::endl;
-	for (int ii = 0; ii < testImgHdr.maxImages; ii += 1)
-	{
-
-		oneLayerNN->SetLayer(testImgMatrix[ii]);
-		oneLayerNN->ForwardPropagation();
-
-		GLdouble ** hiddenResult = new GLdouble *[testOutputHdr.imgWidth]();
-		for (int aa = 0; aa < testOutputHdr.imgHeight; aa += 1)
-		{
-			hiddenResult[aa] = new GLdouble[testOutputHdr.imgHeight]();
-		}
-
-		for (int ii = 0; ii < testOutputHdr.imgWidth; ii += 1)
-		{
-			for (int jj = 0; jj < testOutputHdr.imgHeight; jj += 1)
-			{
-				hiddenResult[ii][jj] = oneLayerNN->GetNeurons()[jj].sigmoidOutput;
-			}
-		}
-
-
-		outputLayer->SetLayer(hiddenResult);
-
-		outputLayer->ForwardPropagation();
-
-		int testPrediction = oneLayerNN->GetLayerPrediction();
-
-		if (testPrediction != testImgLbl[ii])
-		{
-			errorCount++;
-		}
-
-		std::cout << "Index: " << ii << "Prediction: " << testPrediction << " Actual: " << testImgLbl[ii] << std::endl;
-	}
-
-	double tempErrorRate;
-	tempErrorRate = (double)errorCount / (double)testImgHdr.maxImages;
-	std::cout.precision(5);
-	std::cout << "Error Count: " << errorCount << " % incorrect: " << std::fixed << tempErrorRate << std::endl;
-	*/
-
-	SUCCEED();
-}
-
-TEST(TestSuite002Layer, DISABLED_TestLayer014_XOR_White_Top_Half)
-{
-	int count = 0;
-	ImageHeader imgHdr;
-	LabelHeader lblHdr;
-	ImageHeader outputHdr;
-
-	//std::string imgFile = "../mnist/train-images.idx3-ubyte";
-	//std::string lblFile = "../mnist/train-labels.idx1-ubyte";
-
-	int hiddenSize = 2;
-	int outputSize = 1;
-
-	UtilityFunctions getFiles;
-
-	imgHdr.maxImages = 50;
-	imgHdr.imgWidth = 2;
-	imgHdr.imgHeight = 2;
-
-	lblHdr.magicNumber = 0;
-	lblHdr.maxLabels = 50;
-
-	outputHdr.maxImages = hiddenSize;
-	outputHdr.imgWidth = 1;
-	outputHdr.imgHeight = hiddenSize;
-
-	Layer * oneLayerNN = new Layer(imgHdr, lblHdr, lblHdr.maxLabels, hiddenSize);
-	Layer * outputLayer = new Layer(outputHdr, lblHdr, lblHdr.maxLabels, outputSize);
-
-	GLdouble * xorLbl = new GLdouble[lblHdr.maxLabels]();
-	for (int ii = 0; ii < lblHdr.maxLabels; ii += 1)
-	{
-		xorLbl[ii] = 1;
-	}
-
-	oneLayerNN->SetImgLbl(xorLbl);
-	outputLayer->SetImgLbl(xorLbl);
-
-	GLdouble *** tempImgMatrix = new GLdouble **[imgHdr.maxImages]();
-	for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
-	{
-		tempImgMatrix[ii] = new GLdouble*[imgHdr.imgWidth]();
-		for (int jj = 0; jj < imgHdr.imgWidth; jj += 1)
-		{
-			tempImgMatrix[ii][jj] = new GLdouble[imgHdr.imgHeight]();
-		}
-	}
-
-
-	for (int aa = 0; aa < imgHdr.maxImages; aa += 1)
-	{
-		for (int bb = 0; bb < imgHdr.imgWidth; bb += 1)
-		{
-			for (int cc = 0; cc < imgHdr.imgHeight; cc += 1)
-			{
-				if (cc < 0)
-				{
-					tempImgMatrix[aa][bb][cc] = 0.00;
-				}
-				else
-				{
-					tempImgMatrix[aa][bb][cc] = 1.00;
-				}
-				
-			}
-		}
-	}
-
-	oneLayerNN->InitLayer_Xavier();
-	outputLayer->InitLayer_Xavier();
-
-	// training neural net
-	std::cout << "Training neural net..." << std::endl;
-	for (int epoch = 0; epoch < 100; epoch += 1)
-	{
-		for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
-		{
-			// adding inputs
-			oneLayerNN->SetLayer(tempImgMatrix[ii]);
-
-			// training one hidden layer
-			oneLayerNN->ForwardPropagation();
-			GLdouble stdError = oneLayerNN->CalculateGeneralError(ii);
-			oneLayerNN->UpdateNeuronWeights(stdError, 0.0001);
-			
-
-			GLdouble ** trainHiddenResult = new GLdouble *[outputHdr.imgWidth]();
-			for (int aa = 0; aa < outputHdr.imgWidth; aa += 1)
-			{
-				trainHiddenResult[aa] = new GLdouble[outputHdr.imgHeight]();
-			}
-
-			for (int ii = 0; ii < outputHdr.imgWidth; ii += 1)
-			{
-				for (int jj = 0; jj < outputHdr.imgHeight; jj += 1)
-				{
-					trainHiddenResult[ii][jj] = oneLayerNN->GetNeurons()[jj].sigmoidOutput;
-				}
-			}
-
-			// training sigmoid layer
-			outputLayer->SetLayer(trainHiddenResult);
-			outputLayer->ForwardPropagation();
-			GLdouble stdSigmoidError = outputLayer->CalculateGeneralError(ii);
-			outputLayer->UpdateNeuronWeights(stdSigmoidError, 0.0001);
-			
-
-			std::cout << "Image index: " << ii << std::endl;
-
-			//int testPrediction = outputLayer->GetLayerPrediction();
-
-			//std::cout << "Index: " << ii << " Prediction: " << testPrediction << " Actual: " << outputLayer->GetImgLbl()[ii] << std::endl;
-
-		}
-
-	}
-
-
-
-	/*
-	// loading pre-trained weights
-	for (int aa = 0; aa < oneLayerNN->GetLayer()->GetNeuralSize(); aa += 1)
-	{
-		oneLayerNN->GetLayer()->GetNeurons()[aa].weightOne = getFiles.ReadCSVFile(oneLayerNN->GetLayer()->GetNeuralSize(), imgHdr);
-
-	}
-	*/
-	/*
-	// testing neural net
-	ImageHeader testImgHdr;
-	ImageHeader testOutputHdr;
-	LabelHeader testLblHdr;
-
-	std::string testImgFile = "../mnist/t10k-images.idx3-ubyte";
-	std::string testLblFile = "../mnist/t10k-labels.idx1-ubyte";
-
-	testImgHdr = getFiles.ReadImageHeader(testImgFile);
-	testLblHdr = getFiles.ReadLabelHeader(testLblFile);
-
-	testOutputHdr = outputHdr;
-
-	int * testImgLbl = new int[testLblHdr.maxLabels]();
-	testImgLbl = getFiles.ReadLabelFile(testLblFile, testLblHdr);
-
-	GLdouble *** testImgMatrix = new GLdouble **[testImgHdr.maxImages]();
-	for (int ii = 0; ii < testImgHdr.maxImages; ii += 1)
-	{
-		testImgMatrix[ii] = new GLdouble*[testImgHdr.imgWidth]();
-		for (int jj = 0; jj < testImgHdr.imgHeight; jj += 1)
-		{
-			testImgMatrix[ii][jj] = new GLdouble[testImgHdr.imgWidth]();
-		}
-	}
-
-	testImgMatrix = getFiles.ReadImageFile(testImgFile, testImgHdr);
-
-	int errorCount = 0;
-
-	std::cout << "testing neural net..." << std::endl;
-	for (int ii = 0; ii < testImgHdr.maxImages; ii += 1)
-	{
-
-		oneLayerNN->SetLayer(testImgMatrix[ii]);
-		oneLayerNN->ForwardPropagation();
-
-		GLdouble ** hiddenResult = new GLdouble *[testOutputHdr.imgWidth]();
-		for (int aa = 0; aa < testOutputHdr.imgHeight; aa += 1)
-		{
-			hiddenResult[aa] = new GLdouble[testOutputHdr.imgHeight]();
-		}
-
-		for (int ii = 0; ii < testOutputHdr.imgWidth; ii += 1)
-		{
-			for (int jj = 0; jj < testOutputHdr.imgHeight; jj += 1)
-			{
-				hiddenResult[ii][jj] = oneLayerNN->GetNeurons()[jj].sigmoidOutput;
-			}
-		}
-
-
-		outputLayer->SetLayer(hiddenResult);
-
-		outputLayer->ForwardPropagation();
-
-		int testPrediction = oneLayerNN->GetLayerPrediction();
-
-		if (testPrediction != testImgLbl[ii])
-		{
-			errorCount++;
-		}
-
-		std::cout << "Index: " << ii << "Prediction: " << testPrediction << " Actual: " << testImgLbl[ii] << std::endl;
-	}
-
-	double tempErrorRate;
-	tempErrorRate = (double)errorCount / (double)testImgHdr.maxImages;
-	std::cout.precision(5);
-	std::cout << "Error Count: " << errorCount << " % incorrect: " << std::fixed << tempErrorRate << std::endl;
-	*/
-
-	SUCCEED();
-}
-
-TEST(TestSuite002Layer, DISABLED_TestLayer015_XOR_Black_Top_Half)
-{
-	int count = 0;
-	ImageHeader imgHdr;
-	LabelHeader lblHdr;
-	ImageHeader outputHdr;
-
-	//std::string imgFile = "../mnist/train-images.idx3-ubyte";
-	//std::string lblFile = "../mnist/train-labels.idx1-ubyte";
-
-	int hiddenSize = 20;
-	int outputSize = 2;
-
-	UtilityFunctions getFiles;
-
-	imgHdr.maxImages = 50;
-	imgHdr.imgWidth = 2;
-	imgHdr.imgHeight = 2;
-
-	lblHdr.magicNumber = 0;
-	lblHdr.maxLabels = 50;
-
-	outputHdr.maxImages = hiddenSize;
-	outputHdr.imgWidth = 1;
-	outputHdr.imgHeight = hiddenSize;
-
-	Layer * oneLayerNN = new Layer(imgHdr, lblHdr, lblHdr.maxLabels, hiddenSize);
-	Layer * outputLayer = new Layer(outputHdr, lblHdr, lblHdr.maxLabels, outputSize);
-
-	GLdouble * xorLbl = new GLdouble[lblHdr.maxLabels]();
-	for (int ii = 0; ii < lblHdr.maxLabels; ii += 1)
-	{
-		xorLbl[ii] = 1;
-	}
-
-	oneLayerNN->SetImgLbl(xorLbl);
-	outputLayer->SetImgLbl(xorLbl);
-
-	GLdouble *** tempImgMatrix = new GLdouble **[imgHdr.maxImages]();
-	for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
-	{
-		tempImgMatrix[ii] = new GLdouble*[imgHdr.imgWidth]();
-		for (int jj = 0; jj < imgHdr.imgWidth; jj += 1)
-		{
-			tempImgMatrix[ii][jj] = new GLdouble[imgHdr.imgHeight]();
-		}
-	}
-
-	/*
-	tempImgMatrix[0][0][0] = 1.00;
-	tempImgMatrix[0][0][1] = 1.00;
-	tempImgMatrix[0][1][0] = 1.00;
-	tempImgMatrix[0][1][1] = 1.00;
-	*/
-
-
-	for (int aa = 0; aa < imgHdr.maxImages; aa += 1)
-	{
-		for (int bb = 0; bb < imgHdr.imgWidth; bb += 1)
-		{
-			for (int cc = 0; cc < imgHdr.imgHeight; cc += 1)
-			{
-				if (cc < 0)
-				{
-					tempImgMatrix[aa][bb][cc] = 1.00;
-				}
-				else
-				{
-					tempImgMatrix[aa][bb][cc] = 0.00;
-				}
-
-			}
-		}
-	}
-
-	oneLayerNN->InitLayer_Xavier();
-	outputLayer->InitLayer_Xavier();
-
-	// training neural net
-	std::cout << "Training neural net..." << std::endl;
-	for (int epoch = 0; epoch < 100; epoch += 1)
-	{
-		for (int ii = 0; ii < imgHdr.maxImages; ii += 1)
-		{
-			// adding inputs
-			oneLayerNN->SetLayer(tempImgMatrix[ii]);
-
-			// training one hidden layer
-			oneLayerNN->ForwardPropagation();
-			GLdouble stdError = oneLayerNN->CalculateGeneralError(ii);
-			oneLayerNN->UpdateNeuronWeights(stdError, 0.0001);
-
-			GLdouble ** trainHiddenResult = new GLdouble *[outputHdr.imgWidth]();
-			for (int aa = 0; aa < outputHdr.imgWidth; aa += 1)
-			{
-				trainHiddenResult[aa] = new GLdouble[outputHdr.imgHeight]();
-			}
-
-			for (int ii = 0; ii < outputHdr.imgWidth; ii += 1)
-			{
-				for (int jj = 0; jj < outputHdr.imgHeight; jj += 1)
-				{
-					trainHiddenResult[ii][jj] = oneLayerNN->GetNeurons()[jj].sigmoidOutput;
-				}
-			}
-
-			// training sigmoid layer
-			outputLayer->SetLayer(trainHiddenResult);
-			outputLayer->ForwardPropagation();
-			GLdouble stdSigmoidError = outputLayer->CalculateGeneralError(ii);
-			outputLayer->UpdateNeuronWeights(stdSigmoidError, 0.0001);
-
-			std::cout << "Image index: " << ii << std::endl;
-
-			int testPrediction = outputLayer->GetLayerPrediction();
-
-			std::cout << "Index: " << ii << " Prediction: " << testPrediction << " Actual: " << outputLayer->GetImgLbl()[ii] << std::endl;
-
-		}
-
-	}
-
-
-
-	/*
-	// loading pre-trained weights
-	for (int aa = 0; aa < oneLayerNN->GetLayer()->GetNeuralSize(); aa += 1)
-	{
-		oneLayerNN->GetLayer()->GetNeurons()[aa].weightOne = getFiles.ReadCSVFile(oneLayerNN->GetLayer()->GetNeuralSize(), imgHdr);
-
-	}
-	*/
-	/*
-	// testing neural net
-	ImageHeader testImgHdr;
-	ImageHeader testOutputHdr;
-	LabelHeader testLblHdr;
-
-	std::string testImgFile = "../mnist/t10k-images.idx3-ubyte";
-	std::string testLblFile = "../mnist/t10k-labels.idx1-ubyte";
-
-	testImgHdr = getFiles.ReadImageHeader(testImgFile);
-	testLblHdr = getFiles.ReadLabelHeader(testLblFile);
-
-	testOutputHdr = outputHdr;
-
-	int * testImgLbl = new int[testLblHdr.maxLabels]();
-	testImgLbl = getFiles.ReadLabelFile(testLblFile, testLblHdr);
-
-	GLdouble *** testImgMatrix = new GLdouble **[testImgHdr.maxImages]();
-	for (int ii = 0; ii < testImgHdr.maxImages; ii += 1)
-	{
-		testImgMatrix[ii] = new GLdouble*[testImgHdr.imgWidth]();
-		for (int jj = 0; jj < testImgHdr.imgHeight; jj += 1)
-		{
-			testImgMatrix[ii][jj] = new GLdouble[testImgHdr.imgWidth]();
-		}
-	}
-
-	testImgMatrix = getFiles.ReadImageFile(testImgFile, testImgHdr);
-
-	int errorCount = 0;
-
-	std::cout << "testing neural net..." << std::endl;
-	for (int ii = 0; ii < testImgHdr.maxImages; ii += 1)
-	{
-
-		oneLayerNN->SetLayer(testImgMatrix[ii]);
-		oneLayerNN->ForwardPropagation();
-
-		GLdouble ** hiddenResult = new GLdouble *[testOutputHdr.imgWidth]();
-		for (int aa = 0; aa < testOutputHdr.imgHeight; aa += 1)
-		{
-			hiddenResult[aa] = new GLdouble[testOutputHdr.imgHeight]();
-		}
-
-		for (int ii = 0; ii < testOutputHdr.imgWidth; ii += 1)
-		{
-			for (int jj = 0; jj < testOutputHdr.imgHeight; jj += 1)
-			{
-				hiddenResult[ii][jj] = oneLayerNN->GetNeurons()[jj].sigmoidOutput;
-			}
-		}
-
-
-		outputLayer->SetLayer(hiddenResult);
-
-		outputLayer->ForwardPropagation();
-
-		int testPrediction = oneLayerNN->GetLayerPrediction();
-
-		if (testPrediction != testImgLbl[ii])
-		{
-			errorCount++;
-		}
-
-		std::cout << "Index: " << ii << "Prediction: " << testPrediction << " Actual: " << testImgLbl[ii] << std::endl;
-	}
-
-	double tempErrorRate;
-	tempErrorRate = (double)errorCount / (double)testImgHdr.maxImages;
-	std::cout.precision(5);
-	std::cout << "Error Count: " << errorCount << " % incorrect: " << std::fixed << tempErrorRate << std::endl;
-	*/
-
-	SUCCEED();
-}
-
-TEST(TestSuite002Layer, DISABLED_TestLayer016_Worked_Example)
+TEST(TestSuite002Layer, DISABLED_TestLayer013_Worked_Example)
 {
 	
 	ImageHeader imgHdr;

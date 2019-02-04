@@ -80,8 +80,10 @@ GLdouble BooleanArithmetic::UniformRandom()
 GLdouble  BooleanArithmetic::SigmoidFunction(GLdouble targetInput)
 {
     GLdouble  tempResult;
+	
+	//tempResult = 1 / (1 + std::exp((-1 * targetInput)));
 	// shift by ONE!!!
-    tempResult = 1 / (1 + std::exp((-1*targetInput))) ;
+    tempResult = 1 / (1 + std::exp((-1*targetInput)+1)) ;
 
     return tempResult;
 }
